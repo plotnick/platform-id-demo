@@ -39,24 +39,106 @@ a lot of headaches. That's the theory, anyway.
 
 ## Preparation
 
-M: To set things up for the demo today, and for the real signing at
+O: To set things up for the demo today, and for the real signing at
 Benchmark in the future, we need to do some prep work. First, we need
 to create keys in the Online Signing Service to do the signing.
 Then we need to have certificates for those keys signed by some
 root keys. Those certificates then get imported back into the OSS.
 
-M: For today's demo we're using a sandbox deployment of OSS, which runs
+O: For today's demo we're using a sandbox deployment of OSS, which runs
 a real instance of Permission Slip with real keys stored in KMS, but
 obviously *not* the production keys. So everything here is real, just
 the key and signature _bits_ will be different in production. The root
 key here is on a YubiHSM just like the real root key, but it's not locked
 in a bank, it's just on Phil's desk.
 
-O: Today we'll run through a "mock ceremony" where we signed certificates
+O: Today we'll run through a "mock ceremony" where we sign certificates
 for the keys in the sandbox OSS with that development HSM. Next week we'll
 do approximately the same thing, just with higher stakes; those keys have
 *meaning* by virtue of being locked away, only used in carefully scripted
 ceremonies, and so on.
+
+O: We'll start by creating an intermediate key. We do that with:
+
+```
+permslip generate-key "Platform Identity Sandbox Signer A2" \
+  p384-kms \
+   --dn "C=US,O=Oxide Computer Company,CN=Platform Identity Sandbox Signer Online A2"
+```
+
+O: Then we have to tell Permission Slip how it's allowed to use that key.
+We call this the "key context", and setting it requires two approvals. In
+this demo, Alex and I will play the approvers, but we don't really have
+that role in production; it's a role in Permission Slip that has elevated
+permissions. So, I run:
+
+```
+permslip \
+    approve -- \
+    set-key-context \
+    "Platform Identity Sandbox Signer A2" \
+    --kind=csr \
+    --hash=sha384 \
+    --cert-ext-basic-ca=true \
+    --cert-ext-key-usage=key-cert-sign \
+    --cert-ext-key-usage=crl-sign \
+    --cert-ext-policy=1.3.6.1.4.1.57551.1.3 \
+    --cert-ext-policy=2.23.133.5.4.100.6 \
+    --cert-ext-policy=2.23.133.5.4.100.8 \
+    --cert-ext-policy=2.23.133.5.4.100.12
+```
+
+O: And Alex runs the same command. Now we've got two approvals, and we
+can then set the actual key context by dropping the `approve --`:
+
+```
+permslip \
+    set-key-context \
+    "Platform Identity Sandbox Signer A2" \
+    --kind=csr \
+    --hash=sha384 \
+    --cert-ext-basic-ca=true \
+    --cert-ext-key-usage=key-cert-sign \
+    --cert-ext-key-usage=crl-sign \
+    --cert-ext-policy=1.3.6.1.4.1.57551.1.3 \
+    --cert-ext-policy=2.23.133.5.4.100.6 \
+    --cert-ext-policy=2.23.133.5.4.100.8 \
+    --cert-ext-policy=2.23.133.5.4.100.12
+```
+
+O: All right, now we've got a key. What we need next is a signed
+certificate for that key. So we ask permslip to generate a Certificate
+Signing Request (CSR):
+
+```
+permslip generate-csr "Platform Identity Sandbox Signer A2" > platform-id.csr
+```
+
+O: To sign it, we need a little ceremony. So we pass it to our MC, Phil.
+*Paste csr into chat.*
+
+M: Cool, got it. To sign this CSR, we need to get it into a form that OKS,
+the Offline Key Store software, can manipulate.
+
+M: ... OKS commands here ...
+
+M: *Paste root and intermediate certificates into chat.*
+
+O: *Copy into `platform-id-root.crt` and `platform-id.crt`.*
+Cool, got those. So, to import the cert back into permslip we have
+to convince it that it's valid, which means also importing the root
+cert. But that, being a root, is self-signed, so that requires approval.
+So we do our little approval dance again, but we only need one for this:
+
+```
+permslip approve -- import-cert platform-id-root.crt --self-signed
+permslip import-cert platform-id-root.crt --self-signed
+```
+
+O: And then we can import our intermediate signing cert:
+```
+permslip import-cert platform-id.crt "Platform Identity Sandbox Signer A2"
+```
 
 ## Authentication
 
