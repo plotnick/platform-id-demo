@@ -8,6 +8,12 @@ N: Narrator, played by Alex
 
 O: Operations, played by Ian
 
+## Environment
+
+```
+export PERMSLIP_URL=https://permslip-east.inickles.0xeng.dev
+```
+
 ## Context
 
 N: Before we ship a big board (Gimlet, Sidecar, or PSC), we assign it
@@ -21,9 +27,11 @@ could potentially mint fraudulent certificates for non-Oxide hardware.
 N: Here's a rough diagram of the chain of signatures that goes into an
 attestation from a Root of Trust on an Oxide device. At the top of the
 diagram, in the red box, we have our offline root signing an intermediate
-signing certificate. We call this a signing ceremony, and it's red to
-indicate that this is an expensive operation: it takes a lot of people
-many days to prepare and execute that one signature operation.
+signing certificate. That root key is on a YubiHSM that gets locked in a
+safe deposit box in a bank downtown. To use this key, we have a "signing
+ceremony", and it's red to indicate that this is an expensive operation:
+it takes a lot of people many days to prepare and execute that one
+signature operation.
 
 N: But once that's done, we can use that intermediate certificate to issue
 platform identity certificates to the devices during manufacturing. That's
@@ -269,7 +277,9 @@ SSH public key authentication. Some of you may remember using such a thing
 at JoyEnt. Josh (or maybe someone else?) wrote a little piece of code that
 could talk to an SSH agent, and ask it to sign authentication tokens. He's
 re-written that in Rust, and is using it in Facade (the main manufacturing
-station software), and now Permission Slip uses it, too.
+station software), and now Permission Slip uses it, too. I encourage you
+to check it out for your authentication needs:
+https://github.com/oxidecomputer/sshauth
 
 N: The idea is that instead of authenticating as a person, you
 authenticate "as" a certain public key by proving that you have access
@@ -328,8 +338,8 @@ O:
 ```
 permslip approve-batch \
   --single-use \
-  --start='2024-03-29T18:00:00Z' \
-  --end='2024-03-29T19:00:00Z' \
+  --start='2024-03-30T18:00:00Z' \
+  --end='2024-03-30T19:00:00Z' \
   --constraints='C=US,O=Oxide Computer Company,CN=PDV2:PPP-PPPPPPP:RRR:SSSSSSSSSSS' \
   --constraints='C=US,O=Oxide Computer Company,CN=PDV2:PPP-PPPPPPP:RRR:TTTTTTTTTTT' \
   -- sign "Platform Identity Sandbox Signer A2"
@@ -364,7 +374,7 @@ can give the platform an identity:
 $ dice-mfg --serial-dev /dev/ttyUSB0 \
     manufacture \
     --require-release-policy false \
-    "PDV2:PPP-PPPPPPP:RRR:LLLWWYYSSSS" \
+    "PDV2:PPP-PPPPPPP:RRR:SSSSSSSSSSS" \
     permslip "key name"
 ```
 
