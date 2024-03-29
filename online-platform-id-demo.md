@@ -82,7 +82,7 @@ O:
 ```
 permslip generate-key "Platform Identity Sandbox Signer A2" \
   p384-kms \
-   --dn "C=US,O=Oxide Computer Company,CN=Platform Identity Sandbox Signer Online A2"
+   --dn "C=US,O=Oxide Computer Company,CN=Platform Identity Sandbox Signer A2"
 ```
 
 N: Then we have to tell Permission Slip how it's allowed to use that key.
