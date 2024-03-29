@@ -148,7 +148,8 @@ next is a certificate for that key, signed by a root. So we ask permslip
 to generate a Certificate Signing Request (CSR):
 
 ```
-permslip generate-csr "Platform Identity Sandbox Signer A2"
+permslip generate-csr "Platform Identity Sandbox Signer A2  | tee platform_id_signer_a2.csr"
+openssl req -in platform_id_signer_a2.csr -text -noout
 ```
 
 N: To sign it, we need a little ceremony. So we pass it to our MC, Phil.
