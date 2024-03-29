@@ -1,0 +1,19 @@
+digraph {
+        node [shape=record]
+        subgraph cluster_offline {
+                label = "Signing ceremony"
+                color = "red"
+                "Offline root" -> "Intermediate signer certificate"
+        }
+        subgraph cluster_hsm {
+                label = "Mfg station    w/YubiHSM\nor (soon)     w/permslip"
+                color = "orange"
+                "Intermediate signer certificate" -> "Platform identity certificate"
+        }
+        subgraph cluster_device {
+                label = "On the    device"
+                color = "darkgreen"
+                "Platform identity certificate" -> "Device identity certificate"
+                "Device identity certificate" -> "Root of Trust attestations"
+        }
+}

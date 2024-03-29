@@ -16,26 +16,44 @@ certificate (see RFDs 273, 303). The private key used to sign those
 certificates is quite sensitive: if someone were to steal it, they
 could potentially mint fraudulent certificates for non-Oxide hardware.
 
-N: Right now, the key used to sign platform identity certificates lives
-in a YubiHSM (a fancy, auditable, more expensive YubiKey) that an Oxide
-employee has to physically carry to the manufacturing station when we're
-ready to issue certs, unlock it with a password, keep tabs on it at all
-times, and take it home and secure it when they're done signing. This
-process worked well enough to issue certs for our first few racks, but
-is inconvenient and risky. It's also basically impossible to hand off to
-our manufacturing partner without introducing even more inconvenience and
-risk.
+![Platform ID signing diagram](platform-id-signing.svg)
 
-N: Our solution, which we're going to demo today, is to use the Online Signing
-Service, aka "Permission Slip" (RFD 343) to manage and sign with the
-platform ID certificate signing key. This is an intermediate key, not a
-root, but _its_ certificate will need to be signed by an offline root;
-we're going to be doing that in a ceremony next week. Once that initial
-signing is done, though, the manufacturing stations will be able to use the
-OSS to safely sign platform id certs without physical access to an HSM.
-And that means that we can hand off that signing process to our manufacturing
-partener _without_ entrusting them with the key itself, saving both of us
-a lot of headaches. That's the theory, anyway.
+N: Here's a rough diagram of the chain of signatures that goes into an
+attestation from a Root of Trust on an Oxide device. At the top of the
+diagram, in the red box, we have our offline root signing an intermediate
+signing certificate. We call this a signing ceremony, and it's red to
+indicate that this is an expensive operation: it takes a lot of people
+many days to prepare and execute that one signature operation.
+
+N: But once that's done, we can use that intermediate certificate to issue
+platform identity certificates to the devices during manufacturing. That's
+the orange box in the middle: it's not as expensive and sensitive as a
+ceremony, but it's still sensitive. The key that's currently used to sign
+those platform identity certificates lives on a YubiHSM, which is basically
+a fancy, auditable, much more expensive YubiKey. To be sure it's not
+misused, an Oxide employee has to physically carry that HSM to the
+manufacturing station when we're ready to issue certs, unlock it with a
+password, keep tabs on it at all times, and take it home and secure it when
+they're done signing. This process worked well enough to issue certs for
+our first few racks, but is inconvenient and risky. It's also basically
+impossible to hand off to our manufacturing partner without introducing
+even more inconvenience and risk.
+
+N: Our solution, which we're going to demo today, is to use the Online
+Signing Service, aka "Permission Slip" (RFD 343) to manage and sign with
+the intermediate signing key. Once the certificate for that key is signed
+in the ceremony next week, the manufacturing stations will be able to use
+the permslip to safely sign platform id certs without physical access to
+an HSM. And that means that we can hand off that signing process to our
+manufacturing partener without entrusting them with the key itself,
+saving both of us a lot of headaches. That's the theory, anyway.
+
+N: Just to finish the picture: once the device has its signed platform
+identity certificate, it can make its own device identity certificate,
+which is then used to sign various attestations. That's the green box;
+all that stuff happens internally on the device. We're mostly going to
+talk about stuff in the red and orange boxes today, but we'll use things
+in the green box to validate all that other stuff.
 
 ## Preparation
 
@@ -71,10 +89,10 @@ N: Then we have to tell Permission Slip how it's allowed to use that key.
 We call this the "key context", and setting it requires two approvals.
 
 N: Approvals are how permission slip doles out authorizations for specific,
-seensitive requests. In this demo, Ian and I will play the approvers, but
+sensitive requests. In this demo, Ian and I will play the approvers, but
 we don't really have that role in production.
 
-The settings that we're approving here specify exactly how the key is
+N: The settings that we're approving here specify exactly how the key is
 allowed to be used: it can be used only to sign a CSR, using sha384
 as the hash algorithm, and then there are a bunch of X.509 certificate
 extension parameters that specify that certs generated with these keys
