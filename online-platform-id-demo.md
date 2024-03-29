@@ -48,66 +48,14 @@ root keys. Those certificates then get imported back into the OSS.
 N: For today's demo we're using a sandbox deployment of OSS, which runs
 a real instance of Permission Slip with real keys stored in KMS, but
 obviously *not* the production keys. So everything here is real, just
-the key and signature _bits_ will be different in production.
+the key and signature _bits_ will be different in production. The root key for
+this PKI will live on a YubiHSM just like the real root key, but it's not
+locked in a bank, it's just on Phil's desk.
 
-M: The root here will be on a YubiHSM just like the real root key.
-For the purpose of demonstration though we'll show how we boostrap the keystore and the associate certificate authority manually.
-This is a sort of informal provisioning ceremony for an offline keystore.
-Our management tool expects the YubiHSM to start in the factory default state and so we start by reseting my test key:
-```shell
-$ yhsm --auth-id 2 reset
-```
-
-Before we can create the certificate authority we need to initialize the YubiHSM:
-```shell
-$ oks hsm --no-backup initialize --passwd-challenge
-```
-
-Now we can create a key for our CA. We describe the key to the tool w/ a simple JSON structure:
-```json
-{
-    "common_name":"Platform Identity Root 20780358",
-    "id":1,
-    "algorithm":"Ecp384",
-    "capabilities":"All",
-    "domain":"DOM1",
-    "hash":"Sha384",
-    "label":"platform-identity-root",
-    "purpose":"Identity",
-    "initial_serial_number":"0000000000000000000000000000000000000000",
-    "self_signed":true
-}
-```
-
-We hand this config over to the `oks` tool and have it generate the key for us:
-```shell
-$ oks hsm --no-backup generate --key-spec pid-root.keyspec.json
-```
-
-Then we create the CA metadata & the self signed / root cert:
-```shell
-$ oks ca initialize --key-spec pid-root.keyspec.json
-```
-
-The root cert will be at `output/platform-identity-root.cert.pem.
-This is the "trust anchor" for our measured boot implementation.
-
-Now that we have our PKI we can process the CSR for the intermediate signing key that we created in permslip previously.
-To do so we create another json structure that tells the OKS tool which key to sign the cert.
-We pull the label directly from they keyspec above:
-```shell
-$ format-csr --label 'platform-identity-root' --csr pid-int.csr.pem > pid-int.csrspec.json
-```
-
-We then sign the CSR:
-```shell
-$ oks ca sign --csr-spec pid-int.csrspec.json
-```
-
-N: Today we'll run through a "mock ceremony" where we sign a certificate
-for the key in the sandbox OSS with that development HSM. Next week we'll
-do approximately the same thing, just with higher stakes; those keys have
-*meaning* by virtue of being locked away, only used in carefully scripted
+N: Today we'll run through a "mock ceremony" where we sign a certificate for
+the key in the sandbox OSS with a development HSM that we'll setup live. Next
+week we'll do approximately the same thing, just with higher stakes; those keys
+have *meaning* by virtue of being locked away, only used in carefully scripted
 ceremonies, and so on.
 
 N: We'll start by creating an intermediate key.
@@ -181,10 +129,77 @@ N: To sign it, we need a little ceremony. So we pass it to our MC, Phil.
 
 O: *Paste csr into chat.*
 
-M: Cool, got it. To sign this CSR, we need to get it into a form that OKS,
-the Offline Key Store software, can manipulate.
+M: Cool, got it.
+To sign this CSR, we'll need another signing key to act as the root for our PKI.
+To keep our demo as accurate as possible we'll create this key in a YubiHSM like we do our prdocution keys.
+We just won't enforce the same controls over the hardware we use and the process that we follow.
+This is a sort of informal provisioning ceremony for an offline keystore as well as a signing ceremony for the online intermediate signer that lives in the OSS.
 
-M: ... OKS commands here ...
+Our management tool expects the YubiHSM to start in the factory default state and so we start by reseting my test key:
+```shell
+$ yhsm --auth-id 2 reset
+```
+
+Before we can create the certificate authority we need to initialize the YubiHSM:
+```shell
+$ oks hsm --no-backup initialize --passwd-challenge
+```
+
+Now we can create a key for our CA. We describe the key to the tool w/ a simple JSON structure:
+```json
+{
+    "common_name":"Platform Identity Root 20780358",
+    "id":1,
+    "algorithm":"Ecp384",
+    "capabilities":"All",
+    "domain":"DOM1",
+    "hash":"Sha384",
+    "label":"platform-identity-root",
+    "purpose":"Identity",
+    "initial_serial_number":"0000000000000000000000000000000000000000",
+    "self_signed":true
+}
+```
+
+We hand this config over to the `oks` tool and have it generate the key for us:
+```shell
+$ oks hsm --no-backup generate --key-spec pid-root.keyspec.json
+```
+
+Then we create the CA metadata & the self signed / root cert:
+```shell
+$ oks ca initialize --key-spec pid-root.keyspec.json
+```
+
+This is the "trust anchor" for our measured boot implementation.
+
+Now that we have our PKI we can process the CSR for the intermediate signing key that we created in permslip previously.
+To do so we create another json structure that tells the OKS tool which key to sign the cert.
+We pull the label directly from they keyspec above:
+```shell
+$ format-csr --label 'platform-identity-root' --csr pid-int.csr.pem > pid-int.csrspec.json
+```
+
+We then sign the CSR:
+```shell
+$ oks ca sign --csr-spec pid-int.csrspec.json
+```
+
+M: To complete the process we return the cert for the CA root:
+```shell
+$ cat output/platform-identity-root.cert.pem
+-----BEGIN CERTIFICATE-----
+<snip/>
+-----END CERTIFICATE-----
+```
+
+and the cert for the intermediate signer:
+```shell
+$ cat output/platform-identity-intermediate.cert.pem
+-----BEGIN CERTIFICATE-----
+<snip/>
+-----END CERTIFICATE-----
+```
 
 M: *Paste root and intermediate certificates into chat.*
 
