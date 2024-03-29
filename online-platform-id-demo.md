@@ -281,9 +281,24 @@ buy a new one, import its public key, and get back to our day.
 
 N: Since Phil's going to be pretending to be driving a manufacturing station,
 we'll ask him for the SSH key he'd like to authenticate as. Phil, could you
-please run `ssh-add -L` and paste your public key to the chat?
+please create a p256 ssh key, register it w/ your ssh-agent and paste the public key in the chat?
 
-M: Sure, it's: `ecdsa-sha2-nistp256 AAAA...`
+M: Create key:
+```shell
+$ ssh-keygen -t ecdsa -b 256 -f id_pid-demo -C "pid-demo"
+```
+
+Load key:
+```shell
+$ ssh-add id_pid-demo
+```
+
+Get public key:
+```shell
+$ cat id_pid-demo.pub
+or
+$ ssh-add -L | grep pid-demo
+```
 
 N: Thanks! So, to import that, we'll need an approval first, and then
 we can do the import.
@@ -337,16 +352,34 @@ platform ID stuff during manufacturing. Moving to online signing just
 means that instead of shelling out to `openssl` to sign the certs,
 it shells out to `permslip` instead.
 
-M: ...
+To show this we need a system to manufacture so ... here's my `rot-carrier` dev board.
+Currently it's running a hubris release build.
+It's already been manufactured with an identity so it's just beep booping along.
+For our demo we start by clearing the platform identity manufacturing region of the RoT flash:
 
+```shell
+. ../humility-env/activate.sh
+$ dice-mfg-erase.sh
 ```
-dice-mfg sign-cert \
-    --cert-out=platform-id-request.crt.pem \
-    platform-id-request.csr.pem \
-    permslip 'Platform Identity Signer ...'
+
+Now that we've cleared the platform identity mfg flash region and reset the platform the LEDs aren't blinking any longer.
+That's because hubris isn't running yet.
+We cleared the identity flash region and so the RoT boots into the platform identity manufacturing loop.
+We can then program it with an identity cert that will be signed by the intermediate signer by shelling out to `permslip`:
+
+```shell
+$ dice-mfg --serial-dev /dev/ttyUSB0 \
+    manufacture \
+    --require-release-policy false \
+    "PDV2:PPP-PPPPPPP:RRR:LLLWWYYSSSS" \
+    permslip "key name"
 ```
 
 M: Now, we verify ....
+
+```shell
+$ verifier-cli verify --ca-cert output/platform-identity-root.cert.pem
+```
 
 ## Failing to sign
 
