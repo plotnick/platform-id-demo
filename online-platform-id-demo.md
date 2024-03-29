@@ -347,25 +347,18 @@ N: And with that, we'll hand things off to our manufacturing partner.
 
 ## Signing
 
-M: Thanks. We use a set of tools called `dice-utils` to program the
-platform ID stuff during manufacturing. Moving to online signing just
-means that instead of shelling out to `openssl` to sign the certs,
-it shells out to `permslip` instead.
+M: Thanks. We use a of tool called `dice-mfg` to give the platform an identity
+during manufacturing. Moving to online signing just means that instead of
+shelling out to `openssl` to sign the certs, it shells out to `permslip`
+instead.
 
-To show this we need a system to manufacture so ... here's my `rot-carrier` dev board.
-Currently it's running a hubris release build.
-It's already been manufactured with an identity so it's just beep booping along.
-For our demo we start by clearing the platform identity manufacturing region of the RoT flash:
-
-```shell
-. ../humility-env/activate.sh
-$ dice-mfg-erase.sh
-```
-
-Now that we've cleared the platform identity mfg flash region and reset the platform the LEDs aren't blinking any longer.
-That's because hubris isn't running yet.
-We cleared the identity flash region and so the RoT boots into the platform identity manufacturing loop.
-We can then program it with an identity cert that will be signed by the intermediate signer by shelling out to `permslip`:
+To show this we need a system to manufacture so ... here's my `rot-carrier` dev
+board. It's running hubris as of a few days ago & built w/ a production
+configuration. We'd typically expect some blinking lights on the `rot-carrier`
+but in this configuration Hubris hasn't started running yet. This is because
+the platform hasn't yet been programmed with an identity. Now that we've done
+all of the work to set up the PKI and the intermediate signer in permslip we
+can give the platform an identity:
 
 ```shell
 $ dice-mfg --serial-dev /dev/ttyUSB0 \
