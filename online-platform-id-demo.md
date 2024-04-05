@@ -162,10 +162,7 @@ To keep our demo as accurate as possible we'll create this key in a YubiHSM like
 We just won't enforce the same controls over the hardware we use and the process that we follow.
 This is a sort of informal provisioning ceremony for an offline keystore as well as a signing ceremony for the online intermediate signer that lives in the OSS.
 
-Our management tool expects the YubiHSM to start in the factory default state and so we start by reseting my test key:
-```shell
-$ yhsm --auth-id 2 reset
-```
+Our management tool expects the YubiHSM to start in the factory default state and so I've already reset the device for the demo so we're ready to go.
 
 Before we can create the certificate authority we need to initialize the YubiHSM:
 ```shell
@@ -390,7 +387,7 @@ $ dice-mfg --serial-dev /dev/ttyUSB0 \
     manufacture \
     --require-release-policy false \
     "PDV2:PPP-PPPPPPP:RRR:SSSSSSSSSSS" \
-    permslip "key name"
+    permslip "Platform Identity Sandbox Signer A2"
 ```
 
 M: Now, we verify ....
