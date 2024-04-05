@@ -258,6 +258,20 @@ O:
 permslip list-keys -t "Platform Identity Sandbox Signer A2"
 ```
 
+## Intermission
+
+N: Last time, we got to the point of importing a new root certificate,
+only to discover that there was already one there. When we hammer out
+our revocation story, we'll have a command to properly remove a root;
+but for now, we need to resort to a bit of manual brain surgery:
+
+```sql
+DELETE FROM certs WHERE issuer = subject;
+```
+
+N: We've cleared the old root certificate, imported the new one and the
+intermediate signed by the root, and are ready to resume from there.
+
 ## Authentication
 
 N: So, the first step in getting a signature on anything from Permission Slip
@@ -339,8 +353,8 @@ O:
 ```
 permslip approve-batch \
   --single-use \
-  --start='2024-03-30T18:00:00Z' \
-  --end='2024-03-30T19:00:00Z' \
+  --start='2024-04-05T12:00:00Z' \
+  --end='2024-04-06T12:00:00Z' \
   --constraints='C=US,O=Oxide Computer Company,CN=PDV2:PPP-PPPPPPP:RRR:SSSSSSSSSSS' \
   --constraints='C=US,O=Oxide Computer Company,CN=PDV2:PPP-PPPPPPP:RRR:TTTTTTTTTTT' \
   -- sign "Platform Identity Sandbox Signer A2"
